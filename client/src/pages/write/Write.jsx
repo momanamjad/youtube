@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import "./write.css";
-import axios from "axios";
+import axios from "../../axios";
 import { Context } from "../../context/Context";
 
 export default function Write() {
@@ -11,25 +11,43 @@ export default function Write() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!user) {
+      alert("You must be logged in to create a post.");
+      return;
+    }
+
+    if (!title || !desc) {
+      alert("Please provide both a title and a description.");
+      return;
+    }
+
     const newPost = {
       username: user.username,
       title,
       desc,
     };
+
     if (file) {
-      const data =new FormData();
+      const data = new FormData();
       const filename = Date.now() + file.name;
       data.append("name", filename);
       data.append("file", file);
-      newPost.photo = filename;
       try {
-        await axios.post("/upload", data);
-      } catch (err) {}
+        const res = await axios.post("/upload", data);
+        newPost.photo = res.data.url;  
+      } catch (err) {
+        console.error("Upload error:", err);
+        return;
+      }
     }
     try {
       const res = await axios.post("/posts", newPost);
       window.location.replace("/post/" + res.data._id);
-    } catch (err) {}
+    } catch (err) {
+      console.error("Post creation error:", err.response?.data || err.message);
+      alert("Failed to create post. Please check the console for details.");
+    }
   };
   return (
     <div className="write">
@@ -52,7 +70,7 @@ export default function Write() {
             placeholder="Title"
             className="writeInput"
             autoFocus={true}
-            onChange={e=>setTitle(e.target.value)}
+            onChange={(e) => setTitle(e.target.value)}
           />
         </div>
         <div className="writeFormGroup">
@@ -60,7 +78,7 @@ export default function Write() {
             placeholder="Tell your story..."
             type="text"
             className="writeInput writeText"
-            onChange={e=>setDesc(e.target.value)}
+            onChange={(e) => setDesc(e.target.value)}
           ></textarea>
         </div>
         <button className="writeSubmit" type="submit">
